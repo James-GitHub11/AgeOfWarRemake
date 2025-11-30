@@ -1,6 +1,6 @@
 package StatePackage;
 
-import soldier.Soldier;
+import SoldierPackage.Soldier;
 /**
  * SoldierState interface (State pattern for soldier behavior).
  * Each soldier holds a SoldierState and delegates per-tick logic to it.

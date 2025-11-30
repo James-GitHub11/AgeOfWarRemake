@@ -1,6 +1,6 @@
 package StatePackage;
 
-import soldier.Soldier;
+import SoldierPackage.Soldier;
 
 /**
  * DeadState: no operations, once a soldier is dead they stay dead.
