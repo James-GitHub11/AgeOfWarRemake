@@ -1,6 +1,6 @@
 package StatePackage;
 
-import soldier.Soldier;
+import SoldierPackage.Soldier;
 
 /**
  * AttackingState: the soldier attacks nearest enemy when in range.

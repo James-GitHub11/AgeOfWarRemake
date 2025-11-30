@@ -1,6 +1,6 @@
 package StatePackage;
 
-import soldier.Soldier;
+import SoldierPackage.Soldier;
 /**
  * IdleState: soldier moves forward and checks for enemies to switch to Attacking.
  * Implemented as a singleton because states often don't need per-instance data.
