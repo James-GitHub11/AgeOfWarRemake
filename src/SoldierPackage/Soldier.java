@@ -1,6 +1,6 @@
 package SoldierPackage;
 
-//import main.Main;
+import MainPackage.Main;
 import StatePackage.Dead;
 import StatePackage.Idle;
 import StatePackage.SoldierState;
@@ -18,8 +18,8 @@ public abstract class Soldier {
     protected SoldierState state;
 
     // Managers that hold soldiers (owner and enemy) - set by manager when spawned
-    protected observer.ArmyManager ownerManager;
-    protected observer.ArmyManager enemyManager;
+    protected ObserverPackage.ArmyManager ownerManager;
+    protected ObserverPackage.ArmyManager enemyManager;
 
     protected Soldier(int baseHp, int baseDamage, double speed, double startPos, int direction) {
         this.hp = baseHp;
@@ -36,19 +36,33 @@ public abstract class Soldier {
     }
 
     // Move forward based on speed and direction
-    public void moveForward() {
-        if (state == Dead.get()) return;
+    public void moveForward()
+    {
+        if (state == Dead.get())
+        {
+            return;
+        }
         position += speed * direction;
         // clamp to battlefield limits
-        if (position < 0) position = 0;
-        if (position > MainPackage.BATTLEFIELD_LENGTH) position = MainPackage.BATTLEFIELD_LENGTH;
+        if (position < 0)
+        {
+            position = 0;
+        }
+        if (position > Main.BATTLEFIELD_LENGTH)
+        {
+            position = Main.BATTLEFIELD_LENGTH;
+        }
     }
 
     // Finds nearest enemy in range and attacks if close enough.
     // Default melee reach; subclasses (Ranged) may override attackNearest.
-    public boolean attackNearest() {
-        if (enemyManager == null) return false;
-        Soldier target = enemyManager.findNearestAlive(position, -direction);
+    public boolean attackNearest()
+    {
+        if (enemyManager == null)
+        {
+            return false;
+        }
+        Soldier target = enemyManager.findNearestAlive(position, -direction); //assigns the target when he
         if (target == null) return false;
         double dist = Math.abs(target.position - this.position);
         if (dist <= 1.5) { // melee reach
@@ -83,10 +97,10 @@ public abstract class Soldier {
     public void setState(SoldierState newState) {
         if (this.state != null) this.state.exitState(this);
         this.state = newState;
-        if (this.state != null) this.state.enter(this);
+        if (this.state != null) this.state.enterState(this);
     }
 
-    public void setOwnerManagers(observer.ArmyManager owner, observer.ArmyManager enemy) {
+    public void setOwnerManagers(ObserverPackage.ArmyManager owner, ObserverPackage.ArmyManager enemy) {
         this.ownerManager = owner;
         this.enemyManager = enemy;
     }
