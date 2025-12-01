@@ -1,6 +1,6 @@
-package observer;
+package ObserverPackage;
 
-import soldier.Soldier;
+import SoldierPackage.Soldier;
 
 /**
  * Abstract ArmyManager per UML:
@@ -13,14 +13,14 @@ import soldier.Soldier;
 public abstract class ArmyManager implements Observer {
     public Soldier[] spawnedPlayerSoldiers; // UML: Soldiers[] spawnedPlayerSoldiers
     protected int hp;
-    protected factory.ArmyFactory factory;
-    public turret.Turret[] turrets;
+    protected FactoryPackage.ArmyFactory factory;
+    public TurretPackage.Turret[] turrets;
 
-    public ArmyManager(factory.ArmyFactory factory, int startingHP, int armySize, int turretSlots) {
+    public ArmyManager(FactoryPackage.ArmyFactory factory, int startingHP, int armySize, int turretSlots) {
         this.factory = factory;
         this.hp = startingHP;
         this.spawnedPlayerSoldiers = new Soldier[armySize];
-        this.turrets = new turret.Turret[turretSlots];
+        this.turrets = new TurretPackage.Turret[turretSlots];
     }
 
     // Place soldier in first available slot
@@ -47,7 +47,7 @@ public abstract class ArmyManager implements Observer {
         return best;
     }
 
-    public void placeTurret(turret.Turret t, int slot) {
+    public void placeTurret(TurretPackage.Turret t, int slot) {
         if (slot >= 0 && slot < turrets.length) turrets[slot] = t;
     }
 
@@ -64,7 +64,7 @@ public abstract class ArmyManager implements Observer {
 
     // Tick: update turrets (target enemy manager)
     public void updateTurrets(ArmyManager enemyManager) {
-        for (turret.Turret t : turrets) {
+        for (TurretPackage.Turret t : turrets) {
             if (t != null) t.update(enemyManager);
         }
     }

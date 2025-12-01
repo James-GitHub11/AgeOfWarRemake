@@ -1,10 +1,16 @@
 package MainPackage;
 
-import FactoryPackage.*;
-import ObserverPackage.*;
+import FactoryPackage.ArmyFactory;
+import FactoryPackage.StoneAgeFactory;
+import ObserverPackage.EnemyArmyManager;
+import ObserverPackage.GameEvents;
+import ObserverPackage.PlayerArmyManager;
+import SoldierPackage.Soldier;
 import TypesPackage.SoldierType;
 import TypesPackage.TurretType;
-import SoldierPackage.Soldier;
+
+import java.util.Scanner;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * MainPackage.Main game loop — our console playable prototype resembling Age of War.
@@ -17,9 +23,12 @@ import SoldierPackage.Soldier;
  * - If a soldier reaches the enemy HQ, it deals its HP as damage and dies.
  * - Enemies / AI are spawned automatically, while player army requires input to spawn (1,2,3 for various soldier types; 4,5,6 for the various turrets)
  */
+
 public class Main {
     public static final int BATTLEFIELD_LENGTH = 60;
 
+    //Volatile means we are allowed to access and change this variable from another thread
+    volatile static Integer playerInput = null; // will be used in the separate thread to track player input and spawn soldiers in the main game loop
     public static void main(String[] args) throws InterruptedException {
         // Create factories (both start in Stone Age)
         ArmyFactory playerFactory = new StoneAgeFactory(500);
@@ -44,20 +53,102 @@ public class Main {
         int playerSpawnInterval = 6;
         int enemySpawnInterval = 7;
 
-        // Run until base HP reaches 0 or tick limit
-        while (player.getHP() > 0 && enemy.getHP() > 0 && tick < 2000) {
-            tick++;
 
-            // auto spawn infantry periodically
-            if (tick % playerSpawnInterval == 0) {
-                Soldier s = playerFactory.spawnSoldier(SoldierType.RANGED, 2.0, +1);
-                s.setOwnerManagers(player, enemy);
-                player.addSoldier(s);
+
+
+
+        // Thread that waits for player input without blocking the game loop (otherwise, the nextInt() will continue to wait for the enter button)
+        new Thread(() ->
+        {
+            Scanner scanner = new Scanner(System.in);
+            while (true)
+            {
+                try
+                {
+                    int val = scanner.nextInt();   // this blocks, but it’s OK in this thread
+                    playerInput = val;        // stores the player input for main thread to use (so we can spawn soldiers)
+                }
+                catch (Exception e)
+                {
+                    scanner.nextLine(); // clear invalid input
+                }
             }
-            if (tick % enemySpawnInterval == 0) {
-                Soldier s2 = enemyFactory.spawnSoldier(SoldierType.INFANTRY, BATTLEFIELD_LENGTH - 2.0, -1);
-                s2.setOwnerManagers(enemy, player);
-                enemy.addSoldier(s2);
+        }).start(); //starts the thread that allows us to register the player's input
+
+
+        // Run until base HP reaches 0 or tick limit
+        while (player.getHP() > 0 && enemy.getHP() > 0 && tick < 2000) //player and enemy variable is referring to the actual manager / observer
+        {
+            tick++;
+            long lastSpawnTime = 0;
+            // auto spawn infantry periodically
+
+
+            //enemy spawn system (automatic & randomized)
+            if (tick % enemySpawnInterval == 0)
+            {
+                SoldierType randomType = null;
+                int random = ThreadLocalRandom.current().nextInt(1,4); //gives us a random int between 1 and 4 (4 is the exclusive bounds --> so 1,2 or 3)
+                switch(random)
+                {
+                    case 1:
+                    {
+                        randomType = SoldierType.INFANTRY;
+                        break;
+                    }
+                    case 2:
+                    {
+                        randomType = SoldierType.RANGED;
+                        break;
+                    }
+                    case 3:
+                    {
+                        randomType = SoldierType.MOUNTED;
+                        break;
+                    }
+                    default:
+                    {
+                        randomType = null;
+                    }
+                }
+                if (randomType != null)
+                {
+                    Soldier s2 = enemyFactory.spawnSoldier(randomType, BATTLEFIELD_LENGTH - 2.0, -1);
+                    s2.setOwnerManagers(enemy, player);
+                    enemy.addSoldier(s2);
+                }
+
+            }
+            if (playerInput != null)
+            {
+                int selection = playerInput;
+                playerInput = null;
+                SoldierType selectedType = null;
+                switch(selection)
+                {
+                    case 1:
+                    {
+                        selectedType = SoldierType.INFANTRY;
+                        break;
+                    }
+                    case 2:
+                    {
+                        selectedType = SoldierType.RANGED;
+                        break;
+                    }
+                    case 3:
+                    {
+                        selectedType = SoldierType.MOUNTED;
+                        break;
+                    }
+                }
+                //ensure that the player's selected type is not null and it has actually been selected before spawning it (if no input, the game loop continues to tick without spawning any player)
+                if (selectedType != null)
+                {
+                    Soldier s = playerFactory.spawnSoldier(selectedType, 2.0, +1);
+                    s.setOwnerManagers(player, enemy);
+                    player.addSoldier(s);
+                }
             }
 
             // update soldiers (movement and attack)
@@ -72,7 +163,7 @@ public class Main {
             for (Soldier s : enemy.spawnedPlayerSoldiers) {
                 if (s != null && s.getHP() > 0 && s.getPosition() <= 1.0) {
                     player.reduceHP(s.getHP()); // soldier deals its HP as damage to base (simple)
-                    s.takeDamage(9999); // kill soldier
+                    s.takeDamage(9999); // for now, our logic is set to kill off the soldier after he reaches the base (applying 9999 damage to ensure all types die)
                 }
             }
             for (Soldier s : player.spawnedPlayerSoldiers) {
@@ -83,9 +174,12 @@ public class Main {
             }
 
             // render every 2 ticks
-            if (tick % 2 == 0) renderConsole(player, playerFactory, enemy, enemyFactory, tick);
+            if (tick % 2 == 0)
+            {
+                renderConsole(player, playerFactory, enemy, enemyFactory, tick);
+            }
 
-            Thread.sleep(200);
+            Thread.sleep(400);
         }
 
         System.out.println("=== Game Over ===");
@@ -104,17 +198,17 @@ public class Main {
         }
 
         // place turrets
-        for (turret.Turret t : player.turrets) if (t != null) field[(int)Math.round(t.getPosition())] = 'T';
-        for (turret.Turret t : enemy.turrets) if (t != null) field[(int)Math.round(t.getPosition())] = 't';
+        for (TurretPackage.Turret t : player.turrets) if (t != null) field[(int)Math.round(t.getPosition())] = 'T';
+        for (TurretPackage.Turret t : enemy.turrets) if (t != null) field[(int)Math.round(t.getPosition())] = 't';
 
-        // place soldiers
-        for (soldier.Soldier s : player.spawnedPlayerSoldiers)
+        // place soldiers (NOTE: Players = capitalized letters ---> Enemies = lower-case)
+        for (SoldierPackage.Soldier s : player.spawnedPlayerSoldiers)
         {
             if (s != null && s.getHP() > 0)
             {
                 if (s.getTypeName().equals("Infantry"))
                 {
-                    field[(int)Math.round(s.getPosition())] = 'I';
+                    field[(int)Math.round(s.getPosition())] = 'I'; //I for infantry, M for mounted and R for Ranged allows us to visually differentiate our soldiers in console.
                 }
                 if (s.getTypeName().equals("Mounted"))
                 {
@@ -129,8 +223,23 @@ public class Main {
             }
 
         }
-        for (soldier.Soldier s : enemy.spawnedPlayerSoldiers) {
-            if (s != null && s.getHP() > 0) field[(int)Math.round(s.getPosition())] = 'E';
+        for (SoldierPackage.Soldier s : enemy.spawnedPlayerSoldiers) {
+            if (s != null && s.getHP() > 0)
+            {
+                if (s.getTypeName().equals("Infantry"))
+                {
+                    field[(int)Math.round(s.getPosition())] = 'i';
+                }
+                if (s.getTypeName().equals("Mounted"))
+                {
+                    field[(int)Math.round(s.getPosition())] = 'r';
+                }
+                if (s.getTypeName().equals("Ranged"))
+                {
+                    field[(int)Math.round(s.getPosition())] = 'm';
+                }
+                //field[(int)Math.round(s.getPosition())] = 'E';
+            }
         }
 
         System.out.println(new String(field));

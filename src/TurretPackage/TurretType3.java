@@ -18,7 +18,7 @@ public class TurretType3 implements Turret {
         this.age = age;
         this.position = position;
         this.ownerDir = ownerDir;
-        this.damage = 25 * age.getStatMultiplier();
+        this.damage = 25 * age.getAgeStatMulti();
     }
 
     @Override public int getDamage() { return damage; }

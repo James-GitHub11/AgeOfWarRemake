@@ -10,10 +10,11 @@ public class Attacking implements SoldierState {
     private Attacking() {}
     public static Attacking get() { return instance; }
 
-    @Override public void enterState(Soldier s) { /* possible attack animation start */ }
+    @Override public void enterState(Soldier s) { /* here's where we would put an attack animation to start playing (if we were making it an actual rendered game */ }
 
     @Override
-    public void executeState(Soldier s) {
+    public void executeState(Soldier s)
+    {
         // Try to attack nearest; if nothing to attack, go back to idle.
         boolean attacked = s.attackNearest();
         if (!attacked) s.setState(Idle.get());
